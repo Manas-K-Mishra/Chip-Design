@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Logic Gate Simulator</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', 'Arial', sans-serif;
+            text-align: center;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .gate-selector {
+            margin-bottom: 20px;
+        }
+        .toggle-inputs {
+            margin-bottom: 20px;
+        }
+        .toggle-btn {
+            margin: 0 10px;
+            font-size: 16px;
+            padding: 8px 15px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        
+        #gate-diagram {
+            width: 350px;
+            height: 120px;
+        }
+
+        .line {
+            stroke: black;
+            stroke-width: 3;
+            fill: none;
+        }
+        .active-line {
+            stroke: limegreen;
+        }
+        .gate-body {
+            stroke: black;
+            stroke-width: 3;
+            fill: none;
+        }
+        .input-label {
+            font-family: 'Segoe UI', 'Arial', sans-serif;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .bulb-circle {
+            fill: grey;
+            stroke: black;
+            stroke-width: 2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Logic Gate Simulator</h1>
+        <div class="gate-selector">
+            <label for="gate">Choose a gate: </label>
+            <select id="gate" onchange="updateGate()">
+                <option value="AND">AND</option>
+                <option value="OR">OR</option>
+                <option value="NOT">NOT</option>
+                <option value="NAND">NAND</option>
+                <option value="NOR">NOR</option>
+                <option value="XOR">XOR</option>
+                <option value="XNOR">XNOR</option>
+            </select>
+        </div>
+
+        <div class="toggle-inputs">
+            <button class="toggle-btn" onclick="toggle('A')">A = <span id="A-val">0</span></button>
+            <button class="toggle-btn" onclick="toggle('B')">B = <span id="B-val">0</span></button>
+        </div>
+
+        <div id="gate-diagram"></div>
+    </div>
+
+    <script>
+        let A = 0;
+        let B = 0;
+        let currentGate = "AND";
+
+        const svgDiagrams = {
+            AND: `<svg viewBox="0 0 350 120" preserveAspectRatio="xMidYMid meet">
+                    <g id="input-b-group">
+                        <text x="30" y="80" class="input-label">B</text>
+                        <line x1="55" y1="75" x2="120" y2="75" class="line" id="line-B" />
+                    </g>
+                    <text x="30" y="40" class="input-label">A</text>
+                    <line x1="55" y1="35" x2="120" y2="35" class="line" id="line-A" />
+                    <path d="M120 25 L120 85 Q165 85 170 55 Q165 25 120 25" class="gate-body" />
+                    <line x1="171" y1="55" x2="250" y2="55" class="line" id="output-line" />
+                    <circle cx="265" cy="55" r="15" fill="grey" stroke="black" stroke-width="2" id="bulb-circle" />
+                    <path d="M265 48 V62 M258 55 H272" stroke="white" stroke-width="2" id="bulb-filament" />
+                </svg>`,
+            OR: `<svg viewBox="0 0 350 120" preserveAspectRatio="xMidYMid meet">
+                    <g id="input-b-group">
+                        <text x="30" y="80" class="input-label">B</text>
+                        <line x1="55" y1="75" x2="125" y2="75" class="line" id="line-B" />
+                    </g>
+                    <text x="30" y="40" class="input-label">A</text>
+                    <line x1="55" y1="35" x2="125" y2="35" class="line" id="line-A" />
+                    <path d="M120 20 C150 20 175 45 185 55 C175 65 150 90 120 90 A60 60 0 0 0 120 20 Z" class="gate-body" />
+                    <line x1="185" y1="55" x2="250" y2="55" class="line" id="output-line" />
+                    <circle cx="265" cy="55" r="15" fill="grey" stroke="black" stroke-width="2" id="bulb-circle" />
+                    <path d="M265 48 V62 M258 55 H272" stroke="white" stroke-width="2" id="bulb-filament" />
+                </svg>`,
+            NOT: `<svg viewBox="0 0 350 120" preserveAspectRatio="xMidYMid meet">
+                    <text x="30" y="60" class="input-label">A</text>
+                    <line x1="55" y1="55" x2="120" y2="55" class="line" id="line-A" />
+                    <path d="M120 40 L170 55 L120 70 Z" class="gate-body" />
+                    <circle cx="178" cy="55" r="8" class="gate-body" />
+                    <line x1="186" y1="55" x2="250" y2="55" class="line" id="output-line" />
+                    <circle cx="265" cy="55" r="15" fill="grey" stroke="black" stroke-width="2" id="bulb-circle" />
+                    <path d="M265 48 V62 M258 55 H272" stroke="white" stroke-width="2" id="bulb-filament" />
+                </svg>`,
+            NAND: `<svg viewBox="0 0 350 120" preserveAspectRatio="xMidYMid meet">
+                    <g id="input-b-group">
+                        <text x="30" y="80" class="input-label">B</text>
+                        <line x1="55" y1="75" x2="120" y2="75" class="line" id="line-B" />
+                    </g>
+                    <text x="30" y="40" class="input-label">A</text>
+                    <line x1="55" y1="35" x2="120" y2="35" class="line" id="line-A" />
+                    <path d="M120 25 L120 85 Q165 85 170 55 Q165 25 120 25" class="gate-body" />
+                    <circle cx="179" cy="55" r="8" class="gate-body" />
+                    <line x1="187" y1="55" x2="250" y2="55" class="line" id="output-line" />
+                    <circle cx="265" cy="55" r="15" fill="grey" stroke="black" stroke-width="2" id="bulb-circle" />
+                    <path d="M265 48 V62 M258 55 H272" stroke="white" stroke-width="2" id="bulb-filament" />
+                </svg>`,
+            NOR: `<svg viewBox="0 0 350 120" preserveAspectRatio="xMidYMid meet">
+                    <g id="input-b-group">
+                        <text x="30" y="80" class="input-label">B</text>
+                        <line x1="55" y1="75" x2="125" y2="75" class="line" id="line-B" />
+                    </g>
+                    <text x="30" y="40" class="input-label">A</text>
+                    <line x1="55" y1="35" x2="125" y2="35" class="line" id="line-A" />
+                    <path d="M120 20 C150 20 175 45 185 55 C175 65 150 90 120 90 A60 60 0 0 0 120 20 Z" class="gate-body" />
+                    <circle cx="190" cy="55" r="8" class="gate-body" />
+                    <line x1="198" y1="55" x2="250" y2="55" class="line" id="output-line" />
+                    <circle cx="265" cy="55" r="15" fill="grey" stroke="black" stroke-width="2" id="bulb-circle" />
+                    <path d="M265 48 V62 M258 55 H272" stroke="white" stroke-width="2" id="bulb-filament" />
+                </svg>`,
+            XOR: `<svg viewBox="0 0 350 120" preserveAspectRatio="xMidYMid meet">
+                    <g id="input-b-group">
+                        <text x="30" y="80" class="input-label">B</text>
+                        <line x1="55" y1="75" x2="115" y2="75" class="line" id="line-B" />
+                    </g>
+                    <text x="30" y="40" class="input-label">A</text>
+                    <line x1="55" y1="35" x2="115" y2="35" class="line" id="line-A" />
+                    <path d="M105 20 A60 60 0 0 1 105 90" class="gate-body" />
+                    <path d="M115 20 C145 20 170 45 180 55 C170 65 145 90 115 90 A60 60 0 0 0 115 20 Z" class="gate-body" />
+                    <line x1="180" y1="55" x2="250" y2="55" class="line" id="output-line" />
+                    <circle cx="265" cy="55" r="15" fill="grey" stroke="black" stroke-width="2" id="bulb-circle" />
+                    <path d="M265 48 V62 M258 55 H272" stroke="white" stroke-width="2" id="bulb-filament" />
+                </svg>`,
+            XNOR: `<svg viewBox="0 0 350 120" preserveAspectRatio="xMidYMid meet">
+                    <g id="input-b-group">
+                        <text x="30" y="80" class="input-label">B</text>
+                        <line x1="55" y1="75" x2="115" y2="75" class="line" id="line-B" />
+                    </g>
+                    <text x="30" y="40" class="input-label">A</text>
+                    <line x1="55" y1="35" x2="115" y2="35" class="line" id="line-A" />
+                    <path d="M105 20 A60 60 0 0 1 105 90" class="gate-body" />
+                    <path d="M115 20 C145 20 170 45 180 55 C170 65 145 90 115 90 A60 60 0 0 0 115 20 Z" class="gate-body" />
+                    <circle cx="188" cy="55" r="8" class="gate-body" />
+                    <line x1="196" y1="55" x2="250" y2="55" class="line" id="output-line" />
+                    <circle cx="265" cy="55" r="15" fill="grey" stroke="black" stroke-width="2" id="bulb-circle" />
+                    <path d="M265 48 V62 M258 55 H272" stroke="white" stroke-width="2" id="bulb-filament" />
+                </svg>`
+        };
+
+        function toggle(input) {
+            if (input === 'A') A = 1 - A;
+            else B = 1 - B;
+            document.getElementById('A-val').textContent = A;
+            document.getElementById('B-val').textContent = B;
+            evaluate();
+        }
+
+        function updateGate() {
+            currentGate = document.getElementById("gate").value;
+            document.getElementById('gate-diagram').innerHTML = svgDiagrams [currentGate];
+
+            const toggleBBtn = document.querySelector('.toggle-btn:nth-child(2)');
+            if (currentGate === 'NOT') {
+                toggleBBtn.style.display = 'none';
+                B = 0;
+            } else {
+                toggleBBtn.style.display = 'inline-block';
+            }
+            evaluate();
+        }
+
+        function evaluate() {
+            let result = 0;
+            switch(currentGate) {
+                case "AND": result = A & B; break;
+                case "OR": result = A | B; break;
+                case "NOT": result = A ? 0 : 1; break;
+                case "NAND": result = !(A & B) ? 1 : 0; break;
+                case "NOR": result = !(A | B) ? 1 : 0; break;
+                case "XOR": result = A ^ B; break;
+                case "XNOR": result = !(A ^ B) ? 1 : 0; break;
+            }
+
+            const activeLineColor = "limegreen";
+            const inactiveLineColor = "black";
+            const inactiveBulbColor = "grey";
+
+            const diagram = document.getElementById('gate-diagram').querySelector('svg');
+            if (diagram) {
+                diagram.querySelectorAll('.line').forEach(line => {
+                    line.style.stroke = inactiveLineColor;
+                });
+                diagram.querySelectorAll('.gate-body').forEach(path => {
+                    path.style.stroke = inactiveLineColor;
+                });
+                const bulbCircle = diagram.querySelector('#bulb-circle');
+                const bulbFilament = diagram.querySelector('#bulb-filament');
+                if (bulbCircle && bulbFilament) {
+                    bulbCircle.style.fill = inactiveBulbColor;
+                    bulbCircle.style.boxShadow = "0 0 5px #999";
+                    bulbFilament.style.stroke = "white";
+                }
+                const outputLine = diagram.querySelector('#output-line');
+                const lineA = diagram.querySelector('#line-A');
+                const lineB = diagram.querySelector('#line-B');
+
+                if (outputLine) outputLine.style.stroke = result === 1 ? activeLineColor : inactiveLineColor;
+                if (bulbCircle && result === 1) {
+                    bulbCircle.style.fill = activeLineColor;
+                    bulbCircle.style.boxShadow = "0 0 20px lime";
+                    bulbFilament.style.stroke = inactiveLineColor;
+                }
+                if (lineA) lineA.style.stroke = A === 1 ? activeLineColor : inactiveLineColor;
+                if (currentGate !== 'NOT' && lineB) lineB.style.stroke = B === 1 ? activeLineColor : inactiveLineColor;
+            }
+        }
+
+        updateGate();
+    </script>
+</body>
+</html>
